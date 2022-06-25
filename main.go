@@ -6,52 +6,56 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"strings"
 )
 
 func main() {
 
 	//Retrieve file name parameters from command line
 	var (
-		master string
-		tx     string
+		source_file string
+		target_file string
 	)
-	flag.StringVar(&master, "master", "", "The Master file")
-	flag.StringVar(&tx, "tx", "", "The Transaction File to be processed")
+	flag.StringVar(&source_file, "source", "", "The Source file to be searched")
+	flag.StringVar(&target_file, "target", "", "The Target File to be founded")
 	flag.Parse()
 	seen := make(map[string]bool)
 	flag.Visit(func(f *flag.Flag) { seen[f.Name] = true })
-	if !(seen["master"] && seen["tx"]) {
+	if !(seen["source"] && seen["target"]) {
 		flag.PrintDefaults()
 		os.Exit(2)
 	}
 
-	chMaster := openFileChannel(master)
-	chTx := openFileChannel(tx)
+	chSource := openFileChannel(source_file)
+	chTarget := openFileChannel(target_file)
 
 	//Main loop
-	mLine, isMasterActive := <-chMaster
-	txLine, isTransactionActive := <-chTx
-	for isMasterActive || isTransactionActive {
+	sourceLine, isSourceActive := <-chSource
+	targetLine, isTargetActive := <-chTarget
+	for isSourceActive || isTargetActive {
+		sourceLineFields := strings.Split(sourceLine, ";")
+		targetLineFields := strings.Split(targetLine, ";")
 		var action, value string
-		var nextMaster, nextTx bool
-		if !isTransactionActive {
-			action, value, nextMaster, nextTx = "del", mLine, true, false
-		} else if !isMasterActive {
-			action, value, nextMaster, nextTx = "new", txLine, false, true
+		var nextSource, nextTarget bool
+		if !isTargetActive {
+			action, value, nextSource, nextTarget = "outOfTarget", sourceLine, true, false
+		} else if !isSourceActive {
+			action, value, nextSource, nextTarget = "outOfSource", targetLine, false, true
 		} else {
-			if txLine == mLine {
-				action, value, nextMaster, nextTx = "upt", txLine, true, true
-			} else if txLine > mLine {
-				action, value, nextMaster, nextTx = "del", mLine, true, false
-			} else if txLine < mLine {
-				action, value, nextMaster, nextTx = "new", txLine, false, true
+			if targetLineFields[0] == sourceLineFields[0] {
+				value_ := strings.Join(([]string{sourceLineFields[0], sourceLineFields[1], targetLineFields[1]}), ";")
+				action, value, nextSource, nextTarget = "match", value_, false, true
+			} else if targetLine > sourceLine {
+				action, value, nextSource, nextTarget = "notFound", sourceLine, true, false
+			} else if targetLine < sourceLine {
+				action, value, nextSource, nextTarget = "unUsed", targetLine, false, true
 			}
 		}
-		if nextMaster {
-			mLine, isMasterActive = <-chMaster
+		if nextSource {
+			sourceLine, isSourceActive = <-chSource
 		}
-		if nextTx {
-			txLine, isTransactionActive = <-chTx
+		if nextTarget {
+			targetLine, isTargetActive = <-chTarget
 		}
 		fmt.Println(value + "," + action)
 	}
