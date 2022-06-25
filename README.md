@@ -2,7 +2,7 @@
 A sample balance line algorithm.
 
 Usage:
-balance -master [Master File] -tx [Transaction File]
+balance -source [searched values File] -target [founded values File]
 
 master: Is the file that contains the actual state of the data. This file should be in an unduplicated and sorted state
 
