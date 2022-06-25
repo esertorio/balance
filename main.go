@@ -44,7 +44,7 @@ func main() {
 		} else {
 			if targetLineFields[0] == sourceLineFields[0] {
 				value_ := strings.Join(([]string{sourceLineFields[0], sourceLineFields[1], targetLineFields[1]}), ";")
-				action, value, nextSource, nextTarget = "match", value_, false, true
+				action, value, nextSource, nextTarget = "match", value_, false, true //false & true to find 1:N next target for same souce
 			} else if targetLine > sourceLine {
 				action, value, nextSource, nextTarget = "notFound", sourceLine, true, false
 			} else if targetLine < sourceLine {
